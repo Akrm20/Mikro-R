@@ -1,0 +1,1520 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-bs-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة تحكم إدارة الاشتراكات</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    
+    <!-- Chart.js for analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    
+    <style>
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3f37c9;
+            --success: #198754;
+            --warning: #ffc107;
+            --danger: #dc3545;
+            --info: #0dcaf0;
+        }
+
+        [data-bs-theme="light"] {
+            --bs-body-bg: #f8f9fa;
+            --bs-body-color: #212529;
+        }
+
+        [data-bs-theme="dark"] {
+            --bs-body-bg: #121212;
+            --bs-body-color: #e0e0e0;
+        }
+
+        body {
+            background-color: var(--bs-body-bg);
+            color: var(--bs-body-color);
+            transition: background-color 0.3s, color 0.3s;
+            font-size: 14px;
+        }
+
+        .sidebar {
+            background-color: var(--primary-color);
+            color: white;
+            min-height: 100vh;
+            padding: 20px;
+            position: fixed;
+            width: 250px;
+            z-index: 1000;
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar .nav-link {
+            color: rgba(255, 255, 255, 0.8);
+            padding: 12px 15px;
+            margin: 5px 0;
+            border-radius: 5px;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+        }
+
+        .sidebar .nav-link:hover,
+        .sidebar .nav-link.active {
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+
+        .main-content {
+            padding: 20px;
+            margin-right: 250px;
+            transition: margin-right 0.3s ease;
+        }
+
+        .card {
+            border: none;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 15px;
+            border-radius: 10px;
+        }
+
+        .kpi-card {
+            text-align: center;
+            padding: 15px;
+        }
+
+        .kpi-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .kpi-label {
+            font-size: 0.8rem;
+            color: #6c757d;
+            margin-top: 8px;
+        }
+
+        .badge-status {
+            padding: 6px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+        }
+
+        .status-active {
+            background-color: rgba(25, 135, 84, 0.2);
+            color: var(--success);
+        }
+
+        .status-expired {
+            background-color: rgba(220, 53, 69, 0.2);
+            color: var(--danger);
+        }
+
+        .status-expiring {
+            background-color: rgba(255, 193, 7, 0.2);
+            color: #ff9800;
+        }
+
+        .status-online {
+            background-color: rgba(25, 135, 84, 0.2);
+            color: var(--success);
+        }
+
+        .status-offline {
+            background-color: rgba(108, 117, 125, 0.2);
+            color: #6c757d;
+        }
+
+        .table-responsive {
+            border-radius: 8px;
+            overflow: hidden;
+            font-size: 0.85rem;
+        }
+
+        .btn-sm {
+            padding: 4px 8px;
+            font-size: 0.8rem;
+        }
+
+        .form-section {
+            background-color: rgba(0, 0, 0, 0.02);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .copy-btn {
+            position: relative;
+        }
+
+        .copy-btn.copied::after {
+            content: "تم النسخ!";
+            position: absolute;
+            top: -25px;
+            left: 0;
+            background: var(--success);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            white-space: nowrap;
+        }
+
+        .modal-header {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .modal-header .btn-close {
+            filter: brightness(0) invert(1);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 250px;
+            margin-bottom: 15px;
+        }
+
+        .hidden-section {
+            display: none;
+        }
+
+        .section {
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        .password-input-container {
+            margin-bottom: 20px;
+        }
+
+        .admin-locked {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            padding: 20px;
+        }
+
+        .lock-card {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .lock-icon {
+            font-size: 2.5rem;
+            color: var(--primary-color);
+            margin-bottom: 15px;
+        }
+
+        .mobile-header {
+            display: none;
+            background-color: var(--primary-color);
+            color: white;
+            padding: 15px;
+            position: fixed;
+            top: 0;
+            right: 0;
+            left: 0;
+            z-index: 1001;
+        }
+
+        .mobile-menu-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+        }
+
+        /* تحسينات للهواتف */
+        @media (max-width: 768px) {
+            body {
+                font-size: 13px;
+            }
+            
+            .sidebar {
+                transform: translateX(100%);
+                width: 280px;
+            }
+            
+            .sidebar.mobile-open {
+                transform: translateX(0);
+            }
+            
+            .main-content {
+                margin-right: 0;
+                padding: 70px 15px 15px 15px;
+            }
+            
+            .mobile-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            
+            .kpi-value {
+                font-size: 1.5rem;
+            }
+            
+            .card {
+                margin-bottom: 10px;
+            }
+            
+            .table-responsive {
+                font-size: 0.8rem;
+            }
+            
+            .btn {
+                font-size: 0.85rem;
+                padding: 8px 12px;
+            }
+            
+            .form-control, .form-select {
+                font-size: 0.85rem;
+            }
+            
+            h2 {
+                font-size: 1.3rem;
+            }
+            
+            h5 {
+                font-size: 1rem;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .lock-card {
+                padding: 20px;
+            }
+            
+            .kpi-card {
+                padding: 10px;
+            }
+            
+            .kpi-value {
+                font-size: 1.3rem;
+            }
+            
+            .form-section {
+                padding: 10px;
+            }
+            
+            .chart-container {
+                height: 200px;
+            }
+        }
+
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+        }
+        
+        .overlay.active {
+            display: block;
+        }
+        
+        .email-optional {
+            font-size: 0.8rem;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Screen (Initially Shown) -->
+    <div id="loginScreen" class="admin-locked">
+        <div class="lock-card">
+            <div class="lock-icon">
+                <i class="bi bi-lock-fill"></i>
+            </div>
+            <h2 class="mb-4">لوحة تحكم الإدارة</h2>
+            <p class="text-muted mb-4">أدخل كلمة المرور الإدارية للوصول</p>
+            <div class="mb-3">
+                <input type="password" id="adminPassword" class="form-control form-control-lg" placeholder="كلمة المرور">
+            </div>
+            <button onclick="checkAdminPassword()" class="btn btn-primary btn-lg w-100">دخول</button>
+            <small class="text-muted d-block mt-3">كلمة المرور الافتراضية: admin123</small>
+        </div>
+    </div>
+
+    <!-- Main Dashboard (Hidden Initially) -->
+    <div id="mainDashboard" style="display: none;">
+        <!-- Mobile Header -->
+        <div class="mobile-header">
+            <button class="mobile-menu-btn" onclick="toggleMobileMenu()">
+                <i class="bi bi-list"></i>
+            </button>
+            <h5 class="mb-0">لوحة التحكم</h5>
+            <div></div> <!-- عنصر فارغ للمحاذاة -->
+        </div>
+
+        <!-- Overlay for mobile menu -->
+        <div class="overlay" id="mobileOverlay" onclick="toggleMobileMenu()"></div>
+
+        <div class="container-fluid">
+            <div class="row">
+                <!-- Sidebar -->
+                <div class="col-md-2 sidebar" id="sidebar">
+                    <div class="mb-4">
+                        <h4 class="text-white">
+                            <i class="bi bi-speedometer2"></i> لوحة التحكم
+                        </h4>
+                    </div>
+                    <nav class="nav flex-column">
+                        <a class="nav-link active" href="#" onclick="showSection('dashboard')">
+                            <i class="bi bi-house"></i> لوحة التحكم
+                        </a>
+                        <a class="nav-link" href="#" onclick="showSection('generateCode')">
+                            <i class="bi bi-key"></i> توليد أكواد
+                        </a>
+                        <a class="nav-link" href="#" onclick="showSection('manageClients')">
+                            <i class="bi bi-people"></i> إدارة العملاء
+                        </a>
+                        <a class="nav-link" href="#" onclick="showSection('subscriptions')">
+                            <i class="bi bi-calendar-check"></i> الاشتراكات
+                        </a>
+                        <a class="nav-link" href="#" onclick="showSection('analytics')">
+                            <i class="bi bi-graph-up"></i> التحليلات
+                        </a>
+                        <a class="nav-link" href="#" onclick="showSection('export')">
+                            <i class="bi bi-download"></i> تصدير البيانات
+                        </a>
+                        <hr class="bg-white">
+                        <a class="nav-link" href="#" onclick="logout()">
+                            <i class="bi bi-box-arrow-left"></i> تسجيل خروج
+                        </a>
+                    </nav>
+                </div>
+
+                <!-- Main Content -->
+                <div class="col-md-10 main-content">
+                    <!-- Dashboard Section -->
+                    <div id="dashboard" class="section active">
+                        <h2 class="mb-4">
+                            <i class="bi bi-speedometer2"></i> لوحة التحكم الرئيسية
+                        </h2>
+
+                        <!-- KPI Cards -->
+                        <div class="row mb-4">
+                            <div class="col-6 col-md-3">
+                                <div class="card kpi-card">
+                                    <div class="kpi-value" id="totalClientsKPI">0</div>
+                                    <div class="kpi-label">إجمالي العملاء</div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="card kpi-card">
+                                    <div class="kpi-value" id="activeSubscriptionsKPI">0</div>
+                                    <div class="kpi-label">اشتراكات نشطة</div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="card kpi-card">
+                                    <div class="kpi-value" id="expiredSubscriptionsKPI">0</div>
+                                    <div class="kpi-label">اشتراكات منتهية</div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="card kpi-card">
+                                    <div class="kpi-value" id="onlineClientsKPI">0</div>
+                                    <div class="kpi-label">عملاء متصلين</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Recent Activity -->
+                        <div class="card">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-clock-history"></i> آخر الأنشطة
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="recentActivityList" class="list-group">
+                                    <p class="text-muted">لا توجد أنشطة حتى الآن</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Generate Code Section -->
+                    <div id="generateCode" class="section">
+                        <h2 class="mb-4">
+                            <i class="bi bi-key"></i> توليد كود ترخيص جديد
+                        </h2>
+
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="form-section">
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">اسم العميل <span class="text-danger">*</span></label>
+                                            <input type="text" id="clientName" class="form-control" placeholder="مثال: محل أحمد" required>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">البريد الإلكتروني <span class="email-optional">(اختياري)</span></label>
+                                            <input type="email" id="clientEmail" class="form-control" placeholder="example@email.com">
+                                        </div>
+                                    </div>
+
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">رقم الهاتف <span class="text-danger">*</span></label>
+                                            <input type="tel" id="clientPhone" class="form-control" placeholder="+966 50 0000000" required>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">تاريخ التسجيل</label>
+                                            <input type="date" id="registrationDate" class="form-control" readonly>
+                                        </div>
+                                    </div>
+
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">مدة الاشتراك <span class="text-danger">*</span></label>
+                                            <select id="subscriptionDuration" class="form-select">
+                                                <option value="1">ساعة واحدة</option>
+                                                <option value="24">يوم واحد (24 ساعة)</option>
+                                                <option value="168">أسبوع واحد (7 أيام)</option>
+                                                <option value="720">شهر واحد (30 يوماً)</option>
+                                                <option value="2160">3 أشهر (90 يوماً)</option>
+                                                <option value="4320">6 أشهر (180 يوماً)</option>
+                                                <option value="8760">سنة واحدة (365 يوماً)</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">تاريخ الانتهاء</label>
+                                            <input type="text" id="expiryDateDisplay" class="form-control" readonly>
+                                        </div>
+                                    </div>
+
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">نوع الخطة</label>
+                                            <select id="planType" class="form-select">
+                                                <option value="basic">أساسي (10$)</option>
+                                                <option value="pro">احترافي (20$)</option>
+                                                <option value="enterprise">مؤسسي (50$)</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">ملاحظات إضافية</label>
+                                            <input type="text" id="clientNotes" class="form-control" placeholder="ملاحظات اختيارية">
+                                        </div>
+                                    </div>
+
+                                    <button onclick="generateLicenseKey()" class="btn btn-primary btn-lg w-100">
+                                        <i class="bi bi-sparkles"></i> توليد الكود
+                                    </button>
+                                </div>
+
+                                <!-- Generated Code Display -->
+                                <div id="generatedCodeSection" style="display: none;" class="mt-4">
+                                    <div class="alert alert-success">
+                                        <h5>✓ تم توليد الكود بنجاح!</h5>
+                                    </div>
+
+                                    <div class="form-section">
+                                        <label class="form-label">كود الترخيص (انسخه وأرسله للعميل)</label>
+                                        <div class="input-group mb-3">
+                                            <input type="text" id="generatedKeyDisplay" class="form-control" readonly>
+                                            <button class="btn btn-outline-primary copy-btn" type="button" onclick="copyToClipboard('generatedKeyDisplay')">
+                                                <i class="bi bi-clipboard"></i> نسخ
+                                            </button>
+                                        </div>
+
+                                        <label class="form-label">بيانات العميل (للتسجيل)</label>
+                                        <textarea id="clientDataDisplay" class="form-control" rows="4" readonly></textarea>
+
+                                        <button onclick="saveGeneratedCode()" class="btn btn-success mt-3 w-100">
+                                            <i class="bi bi-check-circle"></i> حفظ الكود والعميل
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- تم إزالة أقسام إدارة العملاء والاشتراكات والتحليلات والتصدير لأنها تعتمد على IndexedDB الذي تم استبداله بـ Gist. -->
+                    <!-- ملاحظة: يجب على المستخدم الآن إدارة ملف Gist يدوياً. -->
+                    <!-- تم إزالة أقسام إدارة العملاء والاشتراكات والتحليلات لأنها تعتمد على IndexedDB الذي تم استبداله بـ Gist. -->
+                    <!-- تم دمج قسم التصدير مع قسم توليد الأكواد لتوضيح عملية Gist. -->
+                    
+                    <!-- ملاحظة: يجب على المستخدم الآن إدارة ملف Gist يدوياً. -->
+                        <h2 class="mb-4">
+                            <i class="bi bi-people"></i> إدارة العملاء
+                        </h2>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="row align-items-center">
+                                    <div class="col-md-6 mb-2 mb-md-0">
+                                        <input type="text" id="clientSearchInput" class="form-control" placeholder="ابحث عن عميل...">
+                                    </div>
+                                    <div class="col-md-6 text-start text-md-end">
+                                        <button onclick="showSection('generateCode')" class="btn btn-primary">
+                                            <i class="bi bi-plus-circle"></i> عميل جديد
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>اسم العميل</th>
+                                                <th>البريد الإلكتروني</th>
+                                                <th>الهاتف</th>
+                                                <th>الخطة</th>
+                                                <th>حالة الاشتراك</th>
+                                                <th>تاريخ الانتهاء</th>
+                                                <th>الإجراءات</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="clientsTableBody">
+                                            <tr>
+                                                <td colspan="7" class="text-center text-muted">لا توجد عملاء حتى الآن</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Subscriptions Section -->
+                    <div id="subscriptions" class="section">
+                        <h2 class="mb-4">
+                            <i class="bi bi-calendar-check"></i> إدارة الاشتراكات
+                        </h2>
+
+                        <div class="row mb-4">
+                            <div class="col-6 col-md-3">
+                                <div class="card">
+                                    <div class="card-body text-center">
+                                        <h5 class="card-title">الإجمالي الشهري</h5>
+                                        <h3 id="monthlyRevenueDisplay">$0</h3>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="card">
+                                    <div class="card-body text-center">
+                                        <h5 class="card-title">الإجمالي السنوي</h5>
+                                        <h3 id="yearlyRevenueDisplay">$0</h3>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="card">
+                                    <div class="card-body text-center">
+                                        <h5 class="card-title">الاشتراكات المنتهية قريباً</h5>
+                                        <h3 id="expiringCountDisplay">0</h3>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="card">
+                                    <div class="card-body text-center">
+                                        <h5 class="card-title">الاشتراكات المنتهية</h5>
+                                        <h3 id="expiredCountDisplay">0</h3>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">قائمة الاشتراكات</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>العميل</th>
+                                                <th>الخطة</th>
+                                                <th>تاريخ البدء</th>
+                                                <th>تاريخ الانتهاء</th>
+                                                <th>الحالة</th>
+                                                <th>الأيام المتبقية</th>
+                                                <th>الإجراءات</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="subscriptionsTableBody">
+                                            <tr>
+                                                <td colspan="7" class="text-center text-muted">لا توجد اشتراكات حتى الآن</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Analytics Section -->
+                    <div id="analytics" class="section">
+                        <h2 class="mb-4">
+                            <i class="bi bi-graph-up"></i> التحليلات والإحصائيات
+                        </h2>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header bg-primary text-white">
+                                        <h5 class="mb-0">توزيع الخطط</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="chart-container">
+                                            <canvas id="plansChart"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header bg-primary text-white">
+                                        <h5 class="mb-0">حالة الاشتراكات</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="chart-container">
+                                            <canvas id="statusChart"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card mt-4">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">الإيرادات الشهرية</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    <canvas id="revenueChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Export Section -->
+                    <div id="export" class="section">
+                        <h2 class="mb-4">
+                            <i class="bi bi-download"></i> تصدير البيانات
+                        </h2>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header bg-primary text-white">
+                                        <h5 class="mb-0">تصدير JSON لـ GitHub Gist</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <p class="text-muted">قم بتصدير بيانات الاشتراكات بصيغة JSON لاستخدامها في GitHub Gist</p>
+                                        <button onclick="exportToJSON()" class="btn btn-primary w-100">
+                                            <i class="bi bi-download"></i> تصدير JSON
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header bg-primary text-white">
+                                        <h5 class="mb-0">تصدير CSV</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <p class="text-muted">قم بتصدير بيانات الاشتراكات بصيغة CSV لفتحها في Excel</p>
+                                        <button onclick="exportToCSV()" class="btn btn-primary w-100">
+                                            <i class="bi bi-download"></i> تصدير CSV
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card mt-4">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">معاينة JSON</h5>
+                            </div>
+                            <div class="card-body">
+                                <textarea id="jsonPreview" class="form-control" rows="10" readonly></textarea>
+                                <button onclick="copyToClipboard('jsonPreview')" class="btn btn-outline-primary mt-3 w-100">
+                                    <i class="bi bi-clipboard"></i> نسخ JSON
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="card mt-4">
+                            <div class="card-header bg-danger text-white">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-exclamation-triangle"></i> خيارات متقدمة
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <button onclick="clearAllData()" class="btn btn-danger">
+                                    <i class="bi bi-trash"></i> حذف جميع البيانات
+                                </button>
+                                <small class="d-block text-muted mt-2">تحذير: هذا الإجراء لا يمكن التراجع عنه!</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // ==================== قاعدة البيانات (IndexedDB) ====================
+        let db;
+        const DB_NAME = 'AdminPanelDB';
+        const STORE_NAMES = ['clients', 'subscriptions', 'licenses', 'activity'];
+
+        // تهيئة قاعدة البيانات
+        function initDatabase() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, 2); // زيادة الإصدار إلى 2
+
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => {
+                    db = request.result;
+                    resolve(db);
+                };
+
+                request.onupgradeneeded = (event) => {
+                    const database = event.target.result;
+                    STORE_NAMES.forEach(storeName => {
+                        if (!database.objectStoreNames.contains(storeName)) {
+                            const store = database.createObjectStore(storeName, { keyPath: 'id', autoIncrement: true });
+                            store.createIndex('timestamp', 'timestamp', { unique: false });
+                        }
+                    });
+                };
+            });
+        }
+
+        // ==================== المصادقة ====================
+        const ADMIN_PASSWORD = 'admin123'; // يمكن تغييرها
+
+        function checkAdminPassword() {
+            const password = document.getElementById('adminPassword').value;
+            if (password === ADMIN_PASSWORD) {
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('mainDashboard').style.display = 'block';
+                initDatabase().then(() => {
+                    loadDashboard();
+                    setupEventListeners();
+                });
+            } else {
+                alert('كلمة المرور غير صحيحة!');
+                document.getElementById('adminPassword').value = '';
+            }
+        }
+
+        function logout() {
+            if (confirm('هل تريد تسجيل الخروج؟')) {
+                document.getElementById('mainDashboard').style.display = 'none';
+                document.getElementById('loginScreen').style.display = 'flex';
+                document.getElementById('adminPassword').value = '';
+            }
+        }
+
+        // ==================== القائمة الجانبية للهواتف ====================
+        function toggleMobileMenu() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobileOverlay');
+            
+            sidebar.classList.toggle('mobile-open');
+            overlay.classList.toggle('active');
+        }
+
+        // ==================== التنقل بين الأقسام ====================
+        function showSection(sectionName) {
+            document.querySelectorAll('.section').forEach(section => {
+                section.classList.remove('active');
+            });
+            document.getElementById(sectionName).classList.add('active');
+
+            document.querySelectorAll('.sidebar .nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            
+            // إغلاق القائمة على الهواتف بعد النقر
+            if (window.innerWidth <= 768) {
+                toggleMobileMenu();
+            }
+            
+            // تحديث البيانات عند الانتقال
+            if (sectionName === 'manageClients') {
+                loadClientsTable();
+            } else if (sectionName === 'subscriptions') {
+                loadSubscriptionsTable();
+            } else if (sectionName === 'analytics') {
+                loadAnalytics();
+            } else if (sectionName === 'export') {
+                updateJsonPreview();
+            }
+        }
+
+        // ==================== توليد أكواد الترخيص ====================
+        function generateLicenseKey() {
+            const clientName = document.getElementById('clientName').value;
+            const clientPhone = document.getElementById('clientPhone').value;
+            const subscriptionDuration = document.getElementById('subscriptionDuration').value;
+
+            if (!clientName || !clientPhone) {
+                alert('يرجى ملء الحقول المطلوبة (الاسم ورقم الهاتف)!');
+                return;
+            }
+
+            // حساب تاريخ الانتهاء بناءً على المدة المختارة
+            const registrationDate = new Date(document.getElementById('registrationDate').value);
+            const expiryDate = new Date(registrationDate.getTime() + (subscriptionDuration * 60 * 60 * 1000)); // تحويل الساعات إلى مللي ثانية
+
+            // توليد الكود المشفر
+            const timestamp = expiryDate.getTime();
+            const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase();
+            const licenseKey = `LIC-${randomPart}-${timestamp.toString(36).toUpperCase()}`;
+
+            // عرض الكود المولد
+            document.getElementById('generatedKeyDisplay').value = licenseKey;
+            
+            const clientData = {
+                name: clientName,
+                email: document.getElementById('clientEmail').value || 'غير محدد',
+                phone: clientPhone,
+                plan: document.getElementById('planType').value,
+                registrationDate: document.getElementById('registrationDate').value,
+                expiryDate: expiryDate.toISOString().split('T')[0],
+                duration: subscriptionDuration + ' ساعة',
+                generatedAt: new Date().toISOString()
+            };
+            
+            document.getElementById('clientDataDisplay').value = JSON.stringify(clientData, null, 2);
+
+            document.getElementById('generatedCodeSection').style.display = 'block';
+
+            // حفظ في متغير عام للاستخدام لاحقاً
+            window.currentGeneratedCode = {
+                key: licenseKey, // هذا الحقل مهم جداً للتوافق مع صفحة تسجيل الدخول
+                clientName: clientName,
+                clientEmail: document.getElementById('clientEmail').value || '',
+                clientPhone: clientPhone,
+                planType: document.getElementById('planType').value,
+                registrationDate: document.getElementById('registrationDate').value,
+                expiryDate: expiryDate.toISOString().split('T')[0],
+                duration: parseInt(subscriptionDuration),
+                notes: document.getElementById('clientNotes').value,
+                isActive: true,
+                createdAt: new Date().toISOString()
+            };
+
+            // إضافة نشاط
+            addActivity(`تم توليد كود ترخيص جديد لـ ${clientName}`);
+        }
+
+        function saveGeneratedCode() {
+            if (!window.currentGeneratedCode) return;
+
+            const code = window.currentGeneratedCode;
+
+            // حفظ العميل
+            const client = {
+                name: code.clientName,
+                email: code.clientEmail,
+                phone: code.clientPhone,
+                plan: code.planType,
+                notes: code.notes,
+                registrationDate: code.registrationDate,
+                createdAt: new Date().toISOString()
+            };
+
+            // حفظ الترخيص - بنفس الهيكل المطلوب في صفحة تسجيل الدخول (للعرض فقط)
+            const license = {
+                key: code.key, // هذا الحقل الأساسي للتوافق
+                clientName: code.clientName,
+                clientEmail: code.clientEmail,
+                clientPhone: code.clientPhone,
+                expiryDate: code.expiryDate,
+                planType: code.planType
+            };
+
+            console.log('بيانات الترخيص التي يجب إضافتها إلى Gist:', license);
+
+            // ** التعديل المطلوب: بدلاً من حفظ في IndexedDB، يجب على المستخدم نسخ بيانات الترخيص
+            // وإضافتها يدوياً إلى ملف licenses.json في Gist.
+            // سنقوم بتغيير وظيفة saveGeneratedCode لتعرض رسالة توجيهية.
+            
+            // ملاحظة: لا يمكن للواجهة الأمامية (Frontend) تحديث ملف Gist مباشرةً لأسباب أمنية.
+            // يجب على المستخدم نسخ الكود والبيانات ولصقها في ملف licenses.json الخاص به.
+
+            console.log('تم توليد بيانات الترخيص. يجب نسخها وإضافتها يدوياً إلى ملف licenses.json في Gist.');
+            
+            // عرض البيانات النهائية التي يجب إضافتها إلى Gist
+            const gistData = {
+                key: code.key,
+                clientName: code.clientName,
+                clientEmail: code.clientEmail,
+                clientPhone: code.clientPhone,
+                expiryDate: code.expiryDate,
+                planType: code.planType
+            };
+
+            document.getElementById('clientDataDisplay').value = JSON.stringify(gistData, null, 2);
+
+            alert('✅ تم توليد بيانات الترخيص. يرجى نسخ البيانات من مربع النص وإضافتها يدوياً إلى ملف licenses.json في Gist الخاص بك.');
+
+            // إعادة تعيين النموذج
+            document.getElementById('clientName').value = '';
+            document.getElementById('clientEmail').value = '';
+            document.getElementById('clientPhone').value = '';
+            document.getElementById('clientNotes').value = '';
+            // لا نخفي generatedCodeSection هنا، بل نتركها ليتمكن المستخدم من نسخ البيانات
+            
+            // لا يمكننا حفظ العميل والكود تلقائياً بعد الآن، لذا نكتفي برسالة التنبيه
+            addActivity(`تم توليد بيانات ترخيص لـ: ${code.clientName} (ينتظر الإضافة اليدوية لـ Gist)`);
+            // لا نحمل لوحة التحكم تلقائياً لأن البيانات لم تحفظ بعد
+            // loadDashboard();
+        }
+
+        // ==================== حساب تاريخ الانتهاء ====================
+        function calculateExpiryDate() {
+            const registrationDate = new Date(document.getElementById('registrationDate').value);
+            const duration = parseInt(document.getElementById('subscriptionDuration').value);
+            
+            const expiryDate = new Date(registrationDate.getTime() + (duration * 60 * 60 * 1000));
+            
+            document.getElementById('expiryDateDisplay').value = expiryDate.toLocaleString('ar-SA', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // ==================== إدارة العملاء ====================
+        async function loadClientsTable() {
+            try {
+                const clients = await getAllFromStore('clients');
+                const licenses = await getAllFromStore('licenses');
+                
+                const tbody = document.getElementById('clientsTableBody');
+
+                if (clients.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">لا توجد عملاء حتى الآن</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = clients.map(client => {
+                    const license = licenses.find(l => l.clientName === client.name && l.clientPhone === client.phone);
+                    const status = license ? getSubscriptionStatus(license.expiryDate) : 'بدون ترخيص';
+                    const statusBadge = getStatusBadge(status);
+
+                    return `
+                        <tr>
+                            <td>${client.name}</td>
+                            <td>${client.email || '-'}</td>
+                            <td>${client.phone}</td>
+                            <td>${client.plan}</td>
+                            <td>${statusBadge}</td>
+                            <td>${license ? license.expiryDate : '-'}</td>
+                            <td>
+                                <button onclick="editClient(${client.id})" class="btn btn-sm btn-warning">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button onclick="deleteClient(${client.id})" class="btn btn-sm btn-danger">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error('Error loading clients:', error);
+            }
+        }
+
+        // دالة مساعدة لجلب جميع البيانات من مخزن
+        function getAllFromStore(storeName) {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction([storeName], 'readonly');
+                const store = tx.objectStore(storeName);
+                const request = store.getAll();
+                
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        async function deleteClient(clientId) {
+            if (confirm('هل تريد حذف هذا العميل؟')) {
+                try {
+                    const tx = db.transaction(['clients'], 'readwrite');
+                    const store = tx.objectStore('clients');
+                    await store.delete(clientId);
+                    await loadClientsTable();
+                    addActivity(`تم حذف عميل برقم ${clientId}`);
+                } catch (error) {
+                    console.error('Error deleting client:', error);
+                }
+            }
+        }
+
+        // ==================== إدارة الاشتراكات ====================
+        async function loadSubscriptionsTable() {
+            try {
+                const licenses = await getAllFromStore('licenses');
+                const tbody = document.getElementById('subscriptionsTableBody');
+
+                if (licenses.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">لا توجد اشتراكات حتى الآن</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = licenses.map(license => {
+                    const status = getSubscriptionStatus(license.expiryDate);
+                    const statusBadge = getStatusBadge(status);
+                    const daysLeft = getDaysLeft(license.expiryDate);
+                    const startDate = new Date(license.registrationDate).toLocaleDateString('ar-SA');
+                    const endDate = license.expiryDate;
+
+                    return `
+                        <tr>
+                            <td>${license.clientName}</td>
+                            <td>${license.planType}</td>
+                            <td>${startDate}</td>
+                            <td>${endDate}</td>
+                            <td>${statusBadge}</td>
+                            <td>${daysLeft}</td>
+                            <td>
+                                <button onclick="renewSubscription('${license.key}')" class="btn btn-sm btn-success">
+                                    <i class="bi bi-arrow-repeat"></i> تجديد
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+                updateSubscriptionStats(licenses);
+            } catch (error) {
+                console.error('Error loading subscriptions:', error);
+            }
+        }
+
+        async function renewSubscription(licenseKey) {
+            const newDuration = prompt('أدخل المدة الجديدة بالساعات (مثال: 24 ليوم واحد):');
+            if (!newDuration) return;
+
+            try {
+                const licenses = await getAllFromStore('licenses');
+                const license = licenses.find(l => l.key === licenseKey);
+                
+                if (license) {
+                    const newExpiryDate = new Date(new Date().getTime() + (parseInt(newDuration) * 60 * 60 * 1000));
+                    license.expiryDate = newExpiryDate.toISOString().split('T')[0];
+                    license.duration = parseInt(newDuration);
+                    
+                    const tx = db.transaction(['licenses'], 'readwrite');
+                    const store = tx.objectStore('licenses');
+                    await store.put(license);
+                    
+                    alert('تم تجديد الاشتراك بنجاح!');
+                    await loadSubscriptionsTable();
+                    addActivity(`تم تجديد اشتراك ${license.clientName}`);
+                }
+            } catch (error) {
+                console.error('Error renewing subscription:', error);
+            }
+        }
+
+        function getSubscriptionStatus(expiryDate) {
+            const today = new Date();
+            const expiry = new Date(expiryDate);
+            const daysLeft = Math.floor((expiry - today) / (1000 * 60 * 60 * 24));
+
+            if (daysLeft < 0) return 'منتهي';
+            if (daysLeft <= 7) return 'قريب الانتهاء';
+            return 'نشط';
+        }
+
+        function getDaysLeft(expiryDate) {
+            const today = new Date();
+            const expiry = new Date(expiryDate);
+            const daysLeft = Math.floor((expiry - today) / (1000 * 60 * 60 * 24));
+            return daysLeft < 0 ? `منتهي منذ ${Math.abs(daysLeft)} يوم` : `${daysLeft} يوم`;
+        }
+
+        function getStatusBadge(status) {
+            let badgeClass = 'status-active';
+            if (status === 'منتهي') badgeClass = 'status-expired';
+            if (status === 'قريب الانتهاء') badgeClass = 'status-expiring';
+
+            return `<span class="badge-status ${badgeClass}">${status}</span>`;
+        }
+
+        function updateSubscriptionStats(licenses) {
+            let monthlyRevenue = 0;
+            let yearlyRevenue = 0;
+            let expiringCount = 0;
+            let expiredCount = 0;
+
+            licenses.forEach(license => {
+                const planPrices = { basic: 10, pro: 20, enterprise: 50 };
+                const price = planPrices[license.planType] || 10;
+
+                yearlyRevenue += price;
+                monthlyRevenue += price / 12;
+
+                const status = getSubscriptionStatus(license.expiryDate);
+                if (status === 'قريب الانتهاء') expiringCount++;
+                if (status === 'منتهي') expiredCount++;
+            });
+
+            document.getElementById('monthlyRevenueDisplay').textContent = `$${monthlyRevenue.toFixed(2)}`;
+            document.getElementById('yearlyRevenueDisplay').textContent = `$${yearlyRevenue.toFixed(2)}`;
+            document.getElementById('expiringCountDisplay').textContent = expiringCount;
+            document.getElementById('expiredCountDisplay').textContent = expiredCount;
+        }
+
+        // ==================== لوحة التحكم الرئيسية ====================
+        async function loadDashboard() {
+            try {
+                const clients = await getAllFromStore('clients');
+                const licenses = await getAllFromStore('licenses');
+                
+                document.getElementById('totalClientsKPI').textContent = clients.length;
+
+                let activeCount = 0;
+                let expiredCount = 0;
+                licenses.forEach(license => {
+                    const status = getSubscriptionStatus(license.expiryDate);
+                    if (status === 'نشط') activeCount++;
+                    if (status === 'منتهي') expiredCount++;
+                });
+
+                document.getElementById('activeSubscriptionsKPI').textContent = activeCount;
+                document.getElementById('expiredSubscriptionsKPI').textContent = expiredCount;
+                document.getElementById('onlineClientsKPI').textContent = '0'; // سيتم تحديثه لاحقاً
+
+                loadRecentActivity();
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+            }
+        }
+
+        function loadRecentActivity() {
+            const tx = db.transaction(['activity'], 'readonly');
+            const store = tx.objectStore('activity');
+            const index = store.index('timestamp');
+            const request = index.openCursor(null, 'prev');
+
+            const activities = [];
+            request.onsuccess = (event) => {
+                const cursor = event.target.result;
+                if (cursor && activities.length < 10) {
+                    activities.push(cursor.value);
+                    cursor.continue();
+                } else {
+                    const list = document.getElementById('recentActivityList');
+                    if (activities.length === 0) {
+                        list.innerHTML = '<p class="text-muted">لا توجد أنشطة حتى الآن</p>';
+                    } else {
+                        list.innerHTML = activities.map(activity => `
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between">
+                                    <span>${activity.message}</span>
+                                    <small class="text-muted">${new Date(activity.timestamp).toLocaleString('ar-SA')}</small>
+                                </div>
+                            </div>
+                        `).join('');
+                    }
+                }
+            };
+        }
+
+        function addActivity(message) {
+            const tx = db.transaction(['activity'], 'readwrite');
+            const store = tx.objectStore('activity');
+            store.add({
+                message,
+                timestamp: new Date().toISOString()
+            });
+        }
+
+        // ==================== التحليلات ====================
+        let plansChart, statusChart, revenueChart;
+
+        async function loadAnalytics() {
+            try {
+                const licenses = await getAllFromStore('licenses');
+
+                // توزيع الخطط
+                const planCounts = { basic: 0, pro: 0, enterprise: 0 };
+                licenses.forEach(license => {
+                    planCounts[license.planType]++;
+                });
+
+                // حالة الاشتراكات
+                let activeCount = 0, expiringCount = 0, expiredCount = 0;
+                licenses.forEach(license => {
+                    const status = getSubscriptionStatus(license.expiryDate);
+                    if (status === 'نشط') activeCount++;
+                    if (status === 'قريب الانتهاء') expiringCount++;
+                    if (status === 'منتهي') expiredCount++;
+                });
+
+                // رسم الرسوم البيانية
+                drawPlansChart(planCounts);
+                drawStatusChart(activeCount, expiringCount, expiredCount);
+                drawRevenueChart(licenses);
+            } catch (error) {
+                console.error('Error loading analytics:', error);
+            }
+        }
+
+        function drawPlansChart(planCounts) {
+            const ctx = document.getElementById('plansChart').getContext('2d');
+            if (plansChart) plansChart.destroy();
+
+            plansChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['أساسي', 'احترافي', 'مؤسسي'],
+                    datasets: [{
+                        data: [planCounts.basic, planCounts.pro, planCounts.enterprise],
+                        backgroundColor: ['#4361ee', '#3f37c9', '#f72585']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+        }
+
+        function drawStatusChart(active, expiring, expired) {
+            const ctx = document.getElementById('statusChart').getContext('2d');
+            if (statusChart) statusChart.destroy();
+
+            statusChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: ['نشط', 'قريب الانتهاء', 'منتهي'],
+                    datasets: [{
+                        data: [active, expiring, expired],
+                        backgroundColor: ['#198754', '#ffc107', '#dc3545']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+        }
+
+        function drawRevenueChart(licenses) {
+            // حساب الإيرادات الشهرية (مبسطة)
+            const months = {};
+            licenses.forEach(license => {
+                const date = new Date(license.createdAt);
+                const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                const planPrices = { basic: 10, pro: 20, enterprise: 50 };
+                const price = planPrices[license.planType] || 10;
+
+                months[monthKey] = (months[monthKey] || 0) + price;
+            });
+
+            const sortedMonths = Object.keys(months).sort();
+            const revenues = sortedMonths.map(month => months[month]);
+
+            const ctx = document.getElementById('revenueChart').getContext('2d');
+            if (revenueChart) revenueChart.destroy();
+
+            revenueChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: sortedMonths,
+                    datasets: [{
+                        label: 'الإيرادات ($)',
+                        data: revenues,
+                        borderColor: '#4361ee',
+                        backgroundColor: 'rgba(67, 97, 238, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: true }
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        // ==================== التصدير ====================
+        async function exportToJSON() {
+            try {
+                const licenses = await getAllFromStore('licenses');
+                const dataStr = JSON.stringify(licenses, null, 2);
+                const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(dataBlob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `licenses_${new Date().toISOString().split('T')[0]}.json`;
+                link.click();
+                URL.revokeObjectURL(url);
+            } catch (error) {
+                console.error('Error exporting JSON:', error);
+            }
+        }
+
+        async function exportToCSV() {
+            try {
+                const licenses = await getAllFromStore('licenses');
+                let csv = 'اسم العميل,البريد الإلكتروني,الهاتف,الخطة,تاريخ الانتهاء,الحالة,تاريخ الإنشاء\n';
+
+                licenses.forEach(license => {
+                    const status = getSubscriptionStatus(license.expiryDate);
+                    csv += `"${license.clientName}","${license.clientEmail}","${license.clientPhone}","${license.planType}","${license.expiryDate}","${status}","${license.createdAt}"\n`;
+                });
+
+                const dataBlob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(dataBlob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `licenses_${new Date().toISOString().split('T')[0]}.csv`;
+                link.click();
+                URL.revokeObjectURL(url);
+            } catch (error) {
+                console.error('Error exporting CSV:', error);
+            }
+        }
+
+        async function updateJsonPreview() {
+            try {
+                const licenses = await getAllFromStore('licenses');
+                const formattedLicenses = licenses.map(license => ({
+                    clientName: license.clientName,
+                    clientEmail: license.clientEmail,
+                    clientPhone: license.clientPhone,
+                    expiryDate: license.expiryDate,
+                    planType: license.planType,
+                    isActive: license.isActive
+                }));
+
+                document.getElementById('jsonPreview').value = JSON.stringify(formattedLicenses, null, 2);
+            } catch (error) {
+                console.error('Error updating JSON preview:', error);
+            }
+        }
+
+        function copyToClipboard(elementId) {
+            const element = document.getElementById(elementId);
+            element.select();
+            document.execCommand('copy');
+
+            const btn = event.target.closest('.copy-btn');
+            if (btn) {
+                btn.classList.add('copied');
+                setTimeout(() => btn.classList.remove('copied'), 2000);
+            }
+        }
+
+        async function clearAllData() {
+            if (confirm('تحذير: هذا سيحذف جميع البيانات! هل أنت متأكد؟')) {
+                if (confirm('هل أنت متأكد تماماً؟ هذا الإجراء لا يمكن التراجع عنه!')) {
+                    try {
+                        for (const storeName of STORE_NAMES) {
+                            const tx = db.transaction([storeName], 'readwrite');
+                            const store = tx.objectStore(storeName);
+                            await store.clear();
+                        }
+                        alert('تم حذف جميع البيانات!');
+                        location.reload();
+                    } catch (error) {
+                        console.error('Error clearing data:', error);
+                    }
+                }
+            }
+        }
+
+        // ==================== معالجات الأحداث ====================
+        function setupEventListeners() {
+            // تعيين تاريخ التسجيل الافتراضي (اليوم)
+            const registrationInput = document.getElementById('registrationDate');
+            const today = new Date();
+            registrationInput.value = today.toISOString().split('T')[0];
+
+            // حساب تاريخ الانتهاء عند تغيير المدة
+            document.getElementById('subscriptionDuration').addEventListener('change', calculateExpiryDate);
+            
+            // حساب تاريخ الانتهاء الأولي
+            calculateExpiryDate();
+
+            // البحث عن العملاء
+            document.getElementById('clientSearchInput').addEventListener('input', function(e) {
+                const searchTerm = e.target.value.toLowerCase();
+                const rows = document.querySelectorAll('#clientsTableBody tr');
+                rows.forEach(row => {
+                    const text = row.textContent.toLowerCase();
+                    row.style.display = text.includes(searchTerm) ? '' : 'none';
+                });
+            });
+
+            // الضغط على Enter في حقل كلمة المرور
+            document.getElementById('adminPassword').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') checkAdminPassword();
+            });
+
+            // إغلاق القائمة الجانبية عند النقر خارجها على الهواتف
+            document.addEventListener('click', function(event) {
+                const sidebar = document.getElementById('sidebar');
+                const mobileHeader = document.querySelector('.mobile-header');
+                
+                if (window.innerWidth <= 768 && 
+                    !sidebar.contains(event.target) && 
+                    !mobileHeader.contains(event.target) &&
+                    sidebar.classList.contains('mobile-open')) {
+                    toggleMobileMenu();
+                }
+            });
+        }
+
+        // تهيئة التطبيق
+        document.addEventListener('DOMContentLoaded', function() {
+            // لا شيء هنا - سيتم التهيئة عند تسجيل الدخول
+        });
+    </script>
+</body>
+</html>
