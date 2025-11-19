@@ -10,7 +10,6 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     
     <style>
-        /* نفس الأنماط السابقة - بدون تغيير */
         :root {
             --primary-color: #4361ee;
             --secondary-color: #3f37c9;
@@ -516,6 +515,9 @@
         const DB_NAME = 'LicenseDB';
         const STORE_NAME = 'sessions';
 
+        // رابط Gist الحقيقي - تم التحديث
+        const GIST_RAW_URL = 'https://gist.githubusercontent.com/Akrm20/a6b343de1bc4ca22c5f17059eeba8b32/raw/licenses.json';
+
         // تهيئة قاعدة البيانات
         function initDatabase() {
             return new Promise((resolve, reject) => {
@@ -537,23 +539,27 @@
         }
 
         // ==================== منطق التحقق من الترخيص ====================
-        
-        // *****************************************************************
-        // * هام: يجب تغيير هذا الرابط بالرابط الخام GIST الخاص بك          *
-        // *****************************************************************
-        const GIST_RAW_URL = 'https://gist.github.com/Akrm20/a6b343de1bc4ca22c5f17059eeba8b32/raw/licenses.json'; // تم التحديث بناءً على طلب المستخدم
 
         /**
          * جلب قائمة التراخيص من Gist
-         * (هذه العملية تتطلب إنترنت)
          */
         async function fetchLicensesFromGist() {
             try {
                 console.log('جاري جلب قائمة التراخيص من Gist...');
-                const response = await fetch(GIST_RAW_URL);
+                console.log('الرابط المستخدم:', GIST_RAW_URL);
+                
+                // إضافة timestamp لمنع التخزين المؤقت
+                const timestamp = new Date().getTime();
+                const response = await fetch(`${GIST_RAW_URL}?t=${timestamp}`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                });
 
                 if (!response.ok) {
-                    throw new Error(`فشل في جلب البيانات: ${response.statusText}`);
+                    throw new Error(`فشل في جلب البيانات: ${response.status} ${response.statusText}`);
                 }
                 
                 const licenses = await response.json();
@@ -563,12 +569,20 @@
                     throw new Error('صيغة ملف Gist غير صحيحة، يجب أن يكون مصفوفة تراخيص.');
                 }
 
-                console.log('تم جلب قائمة التراخيص بنجاح.');
+                console.log('تم جلب قائمة التراخيص بنجاح:', licenses);
                 return licenses;
 
             } catch (error) {
                 console.error('❌ خطأ في الاتصال بـ Gist:', error);
-                throw new Error('يتعذر الاتصال بخادم التراخيص. تأكد من اتصالك بالإنترنت.');
+                
+                // عرض رسالة خطأ أكثر وضوحاً للمستخدم
+                if (error.message.includes('Failed to fetch') || error.message.includes('CORS')) {
+                    throw new Error('تعذر الاتصال بخادم التراخيص. تأكد من اتصالك بالإنترنت وأن الرابط صحيح.');
+                } else if (error.message.includes('404')) {
+                    throw new Error('ملف التراخيص غير موجود. تأكد من صحة رابط Gist.');
+                } else {
+                    throw new Error('حدث خطأ في تحميل بيانات التراخيص: ' + error.message);
+                }
             }
         }
 
@@ -577,8 +591,11 @@
          */
         async function validateLicenseCode(code) {
             try {
+                // تنظيف الكود من المسافات
+                const cleanCode = code.trim().toUpperCase();
+                
                 // التحقق من صيغة الكود
-                if (!code.startsWith('LIC-')) {
+                if (!cleanCode.startsWith('LIC-')) {
                     return {
                         valid: false,
                         message: 'صيغة الكود غير صحيحة. يجب أن يبدأ بـ LIC-'
@@ -589,8 +606,7 @@
                 const licenses = await fetchLicensesFromGist();
                 
                 // 2. البحث عن الترخيص باستخدام الحقل 'key'
-                // ملاحظة: يفترض أن بيانات الترخيص في الـ Gist تحتوي على حقل 'key' مطابق لكود الترخيص
-                const license = licenses.find(l => l.key === code);
+                const license = licenses.find(l => l.key && l.key.toUpperCase() === cleanCode);
                 
                 if (!license) {
                     return {
@@ -618,17 +634,16 @@
 
                 return {
                     valid: true,
-                    clientName: license.clientName,
+                    clientName: license.clientName || 'غير محدد',
                     clientEmail: license.clientEmail || 'غير محدد',
-                    clientPhone: license.clientPhone,
-                    planType: license.planType,
+                    clientPhone: license.clientPhone || 'غير محدد',
+                    planType: license.planType || 'أساسي',
                     expiryDate: expiryDate.toLocaleDateString('ar-SA'),
                     daysLeft,
                     isExpiringSoon: daysLeft <= 30 && daysLeft > 0
                 };
             } catch (error) {
                 console.error('خطأ في التحقق من الكود:', error);
-                // إرجاع رسالة الخطأ الناتجة عن fetchLicensesFromGist
                 return {
                     valid: false,
                     message: error.message || 'حدث خطأ غير متوقع في التحقق من الكود.'
@@ -648,7 +663,7 @@
                 
                 const sessionData = {
                     id: 'active_session',
-                    licenseCode: document.getElementById('licenseCode').value,
+                    licenseCode: document.getElementById('licenseCode').value.trim().toUpperCase(),
                     clientName: licenseData.clientName,
                     clientEmail: licenseData.clientEmail,
                     clientPhone: licenseData.clientPhone,
@@ -710,7 +725,7 @@
         async function handleLogin(event) {
             event.preventDefault();
 
-            const licenseCode = document.getElementById('licenseCode').value.trim();
+            const licenseCode = document.getElementById('licenseCode').value;
             const loginBtn = document.getElementById('loginBtn');
             const errorMessage = document.getElementById('errorMessage');
             const errorText = document.getElementById('errorText');
@@ -720,23 +735,23 @@
             loginBtn.innerHTML = '<span class="loading-spinner"></span> جاري التحقق...';
             errorMessage.classList.remove('show');
 
-            // محاكاة تأخير للتحقق (للواقعية)
-            await new Promise(resolve => setTimeout(resolve, 800));
-
-            // التحقق من الكود
-            const validationResult = await validateLicenseCode(licenseCode);
-
-            if (!validationResult.valid) {
-                // عرض رسالة الخطأ
-                errorText.textContent = validationResult.message;
-                errorMessage.classList.add('show');
-                loginBtn.classList.remove('loading');
-                loginBtn.innerHTML = '<i class="bi bi-box-arrow-in-right"></i> التحقق من الكود';
-                return;
-            }
-
-            // حفظ الجلسة
             try {
+                // محاكاة تأخير للتحقق (للواقعية)
+                await new Promise(resolve => setTimeout(resolve, 800));
+
+                // التحقق من الكود
+                const validationResult = await validateLicenseCode(licenseCode);
+
+                if (!validationResult.valid) {
+                    // عرض رسالة الخطأ
+                    errorText.textContent = validationResult.message;
+                    errorMessage.classList.add('show');
+                    loginBtn.classList.remove('loading');
+                    loginBtn.innerHTML = '<i class="bi bi-box-arrow-in-right"></i> التحقق من الكود';
+                    return;
+                }
+
+                // حفظ الجلسة
                 await saveSession(validationResult);
 
                 // إظهار بيانات المستخدم
@@ -781,7 +796,13 @@
             const statusDiv = document.getElementById('subscriptionStatus');
             let statusHTML = '';
 
-            if (licenseData.isExpiringSoon) {
+            if (licenseData.daysLeft < 0) {
+                statusHTML = `
+                    <div class="status-badge status-expired">
+                        ❌ منتهي
+                    </div>
+                `;
+            } else if (licenseData.isExpiringSoon) {
                 statusHTML = `
                     <div class="status-badge status-expiring">
                         ⚠️ قريب الانتهاء
@@ -829,6 +850,15 @@
             const currentTheme = document.documentElement.getAttribute('data-bs-theme');
             const newTheme = currentTheme === 'light' ? 'dark' : 'light';
             document.documentElement.setAttribute('data-bs-theme', newTheme);
+            
+            // تحديث أيقونة الزر
+            const themeIcon = document.querySelector('.theme-toggle i');
+            if (newTheme === 'dark') {
+                themeIcon.className = 'bi bi-sun-fill';
+            } else {
+                themeIcon.className = 'bi bi-moon-fill';
+            }
+            
             localStorage.setItem('theme', newTheme);
         }
 
@@ -837,6 +867,14 @@
             // تحميل المظهر المحفوظ
             const savedTheme = localStorage.getItem('theme') || 'light';
             document.documentElement.setAttribute('data-bs-theme', savedTheme);
+            
+            // تحديث أيقونة الزر حسب المظهر
+            const themeIcon = document.querySelector('.theme-toggle i');
+            if (savedTheme === 'dark') {
+                themeIcon.className = 'bi bi-sun-fill';
+            } else {
+                themeIcon.className = 'bi bi-moon-fill';
+            }
 
             // تهيئة قاعدة البيانات
             try {
